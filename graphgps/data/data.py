@@ -23,7 +23,7 @@ class DatasetFromCSVFile(InMemoryDataset):
         data_path: str,
         smiles_columns: List[str],
         target_columns: List[str] = None,
-        features_generator: List[str] = None,
+        features_generators: List[FeaturesGenerator] = None,
         task_type: Literal['classification', 'regression'] = 'regression',
         root: Optional[str] = None,
         transform: Optional[Callable] = None,
@@ -35,7 +35,7 @@ class DatasetFromCSVFile(InMemoryDataset):
         self.file_name = data_path.split('/')[-1].split('.')[0]
         self.smiles_columns = smiles_columns
         self.target_columns = target_columns
-        self.features_generator = features_generator
+        self.features_generators = features_generators or []
         self.task_type = task_type
         super(DatasetFromCSVFile, self).__init__(root, transform, pre_transform, pre_filter, log)
         path = osp.join(self.processed_dir, self.file_name + '.pt')
@@ -54,7 +54,6 @@ class DatasetFromCSVFile(InMemoryDataset):
         shutil.copyfile(self.data_path, osp.join(self.raw_dir, self.file_name + '.csv'))
 
     def process(self):
-        fgs = [FeaturesGenerator(features_generator_name=fg) for fg in self.features_generator] if self.features_generator is not None else []
         for i, file in enumerate(self.raw_paths):
             data_list = []
             df = pd.read_csv(file)
@@ -69,17 +68,17 @@ class DatasetFromCSVFile(InMemoryDataset):
                 if self.target_columns is None:
                     data.y = None
                 elif self.task_type == 'regression':
-                    data.y = torch.tensor([row[self.target_columns].to_numpy().tolist()], dtype=torch.float32).view(1, -1)
+                    data.y = torch.tensor([row[self.target_columns].to_numpy().tolist()], dtype=torch.float32)# .view(1, -1)
                 else:
-                    data.y = torch.tensor([row[self.target_columns].to_numpy().tolist()], dtype=torch.int32).view(1, -1)
+                    data.y = torch.tensor([row[self.target_columns].to_numpy().tolist()], dtype=torch.int32)# .view(1, -1)
                 data.smiles = row[self.smiles_columns].tolist()
-                if len(fgs) > 0:
+                if len(self.features_generators) > 0:
                     features = []
                     for smiles in data.smiles:
                         if smiles not in SMILES_TO_FEATURES:
                             mol = Chem.MolFromSmiles(smiles)
                             features_mol = []
-                            for fg in fgs:
+                            for fg in self.features_generators:
                                 fs = fg(mol)
                                 fs = np.where(np.isnan(fs), 0, fs)
                                 features_mol.append(fs)

@@ -38,8 +38,14 @@ setuptools.setup(
     author_email='',
     description='This is a easy-to-use command line version of GraphGPS.',
     long_description=long_description,
-    url='https://github.com/xiangyan93/GraphGPS',
+    url='https://github.com/xiangyan93/graphgps4molalkit',
     packages=setuptools.find_packages(),
+        entry_points={
+        'console_scripts': [
+            'graphgps_cv=graphgps.optuna.cross_validation:graphgps_cv',
+            'graphgps_optuna=graphgps.optuna.optuna:graphgps_optuna',
+        ]
+    },
     classifiers=[
         'Programming Language :: Python',
         'License :: OSI Approved :: MIT License',
