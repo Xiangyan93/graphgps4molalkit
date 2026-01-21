@@ -27,6 +27,10 @@ class TrainArgs(Tap):
     """
     Name of the columns containing target values.
     """
+    features_columns: List[str] = None
+    """
+    Name of the columns containing additional features.
+    """
     dataset_type: Literal["regression", "classification", "multiclass"] = None
     """
     Type of dataset.
@@ -75,12 +79,14 @@ class TrainArgs(Tap):
                                 save_dir=self.save_dir,
                                 smiles_columns=self.smiles_columns,
                                 targets_columns=self.targets_columns,
+                                features_columns=self.features_columns,
                                 features_generators=self.features_generators)
         if self.separate_val_path is not None:
             self.dataset_val = get_data(path=self.separate_val_path,
                                         save_dir=self.save_dir,
                                         smiles_columns=self.smiles_columns,
                                         targets_columns=self.targets_columns,
+                                        features_columns=self.features_columns,
                                         features_generators=self.features_generators)
             self.dataset_train_val = copy.copy(self.dataset)
             self.dataset_train_val.data = self.dataset.data + self.dataset_val.data
@@ -89,6 +95,7 @@ class TrainArgs(Tap):
                                          save_dir=self.save_dir,
                                          smiles_columns=self.smiles_columns,
                                          targets_columns=self.targets_columns,
+                                         features_columns=self.features_columns,
                                          features_generators=self.features_generators)
 
 

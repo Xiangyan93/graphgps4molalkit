@@ -15,7 +15,7 @@ CWD = os.path.dirname(__file__)
 
 
 class GraphGPS:
-    def __init__(self, save_dir: str, cfg_path: str, 
+    def __init__(self, save_dir: str, cfg_path: str, n_features: int = 0,
                  features_generators_name: List[str] = None, ensemble_size: int = 1, number_of_molecules: int = 1,
                  n_jobs: int = 8, seed: int = 0):
         self.save_dir = save_dir
@@ -25,6 +25,7 @@ class GraphGPS:
             self.cfg_path = os.path.join(CWD, cfg_path)
         else:
             raise FileNotFoundError(f"Config file {cfg_path} not found.")
+        self.n_features = n_features
         self.features_generators_name = features_generators_name
         self.ensemble_size = ensemble_size
         self.number_of_molecules = number_of_molecules
@@ -103,7 +104,7 @@ class GraphGPS:
                         n_features += 2048
                     else:
                         raise ValueError(f"Unknown features generator: {fg}")
-                cfg.gnn.n_features = n_features * self.number_of_molecules
+                cfg.gnn.n_features = self.n_features + n_features * self.number_of_molecules
             auto_select_device()
 
     def train_epoch(self, loader, model, optimizer, scheduler, batch_accumulation):
@@ -114,6 +115,7 @@ class GraphGPS:
             # batch.split = 'train'
             if len(batch) == 1:
                 continue
+            print(iter)
             batch.to(torch.device(cfg.accelerator))
             pred, true = model(batch)
             # Create mask to exclude NaN values

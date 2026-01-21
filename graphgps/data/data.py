@@ -23,6 +23,7 @@ class DatasetFromCSVFile(InMemoryDataset):
         data_path: str,
         smiles_columns: List[str],
         target_columns: List[str] = None,
+        features_columns: List[str] = None,
         features_generators: List[FeaturesGenerator] = None,
         task_type: Literal['classification', 'regression'] = 'regression',
         root: Optional[str] = None,
@@ -35,6 +36,7 @@ class DatasetFromCSVFile(InMemoryDataset):
         self.file_name = data_path.split('/')[-1].split('.')[0]
         self.smiles_columns = smiles_columns
         self.target_columns = target_columns
+        self.features_columns = features_columns
         self.features_generators = features_generators or []
         self.task_type = task_type
         super(DatasetFromCSVFile, self).__init__(root, transform, pre_transform, pre_filter, log)
@@ -72,8 +74,13 @@ class DatasetFromCSVFile(InMemoryDataset):
                 else:
                     data.y = torch.tensor([row[self.target_columns].to_numpy().tolist()], dtype=torch.int32)# .view(1, -1)
                 data.smiles = row[self.smiles_columns].tolist()
-                if len(self.features_generators) > 0:
+
+                if self.features_columns is not None:
+                    features = row[self.features_columns].to_numpy().tolist()
+                else:
                     features = []
+
+                if len(self.features_generators) > 0:
                     for smiles in data.smiles:
                         if smiles not in SMILES_TO_FEATURES:
                             mol = Chem.MolFromSmiles(smiles)
@@ -82,10 +89,11 @@ class DatasetFromCSVFile(InMemoryDataset):
                                 fs = fg(mol)
                                 fs = np.where(np.isnan(fs), 0, fs)
                                 features_mol.append(fs)
-                            features_mol = np.concatenate(features_mol)
-                            SMILES_TO_FEATURES[smiles] = torch.tensor(features_mol, dtype=torch.float32)
+                            features_mol = np.concatenate(features_mol).tolist()
+                            SMILES_TO_FEATURES[smiles] = features_mol
                         features.append(SMILES_TO_FEATURES[smiles])
-                    data.features = torch.cat(features).view(1, -1)
+                    features += SMILES_TO_FEATURES[smiles]
+                data.features = torch.tensor(features, dtype=torch.float32).view(1, -1)
 
                 if self.pre_filter is not None and not self.pre_filter(data):
                     continue

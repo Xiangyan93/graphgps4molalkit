@@ -80,11 +80,13 @@ class Dataset:
 def get_data(path: str, save_dir: str,
              smiles_columns: List[str] = None,
              targets_columns: List[str] = None,
+             features_columns: List[str] = None,
              features_generators: List[str] = None,
              n_jobs: int = 8):
     dataset_pyg_full = DatasetFromCSVFile(data_path=path,
                                           smiles_columns=smiles_columns,
                                           target_columns=targets_columns,
+                                          features_columns=features_columns,
                                           features_generators=features_generators,
                                           root='%s/graphgps' % save_dir)
     return Dataset(dataset_pyg_full)

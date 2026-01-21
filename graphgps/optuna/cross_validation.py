@@ -24,6 +24,7 @@ def graphgps_cv(arguments=None):
     args.dataset.compute_posenc_stats()
     model = GraphGPS(save_dir=args.save_dir,
                      cfg_path=args.cfg_file,
+                     n_features=len(args.features_columns) if args.features_columns is not None else 0,
                      features_generators_name=args.features_generators_name,
                      number_of_molecules=len(args.smiles_columns),
                      ensemble_size=args.ensemble_size,
