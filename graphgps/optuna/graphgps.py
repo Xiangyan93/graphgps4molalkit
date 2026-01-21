@@ -115,7 +115,6 @@ class GraphGPS:
             # batch.split = 'train'
             if len(batch) == 1:
                 continue
-            print(iter)
             batch.to(torch.device(cfg.accelerator))
             pred, true = model(batch)
             # Create mask to exclude NaN values
