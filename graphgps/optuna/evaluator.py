@@ -218,7 +218,6 @@ class Evaluator:
         return df_predict, df_metrics
 
     def eval_metric(self, y, y_pred, metric):
-        print(y, y_pred)
         mask = ~np.isnan(y)
         y = y[mask]
         y_pred = y_pred[mask]

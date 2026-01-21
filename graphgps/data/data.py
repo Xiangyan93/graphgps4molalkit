@@ -99,8 +99,7 @@ class DatasetFromCSVFile(InMemoryDataset):
                                 features_mol.append(fs)
                             features_mol = np.concatenate(features_mol).tolist()
                             SMILES_TO_FEATURES[smiles] = features_mol
-                        features.append(SMILES_TO_FEATURES[smiles])
-                    features += SMILES_TO_FEATURES[smiles]
+                        features.extend(SMILES_TO_FEATURES[smiles])
                 data.features = torch.tensor(features, dtype=torch.float32).view(1, -1)
 
                 if self.pre_filter is not None and not self.pre_filter(data):
