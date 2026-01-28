@@ -39,9 +39,9 @@ from local_attention import LocalAttention
 from axial_positional_embedding import AxialPositionalEmbedding
 from performer_pytorch.reversible import ReversibleSequence, SequentialSequence
 
-from distutils.version import LooseVersion
+from packaging.version import Version
 
-TORCH_GE_1_8_0 = LooseVersion(torch.__version__) >= LooseVersion('1.8.0')
+TORCH_GE_1_8_0 = Version(torch.__version__) >= Version('1.8.0')
 
 from torch_geometric.utils import to_dense_batch
 
