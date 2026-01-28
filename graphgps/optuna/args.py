@@ -31,7 +31,7 @@ class TrainArgs(Tap):
     """
     Name of the columns containing additional features.
     """
-    dataset_type: Literal["regression", "classification", "multiclass"] = None
+    task_type: Literal["regression", "binary", "multiclass"] = None
     """
     Type of dataset.
     """

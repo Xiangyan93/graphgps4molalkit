@@ -26,8 +26,8 @@ def graphgps_optuna(arguments=None):
             else:
                 raise ValueError(f"Unknown features generator: {fg}")
         cfg.gnn.n_features = n_features * len(args.smiles_columns)
-    cfg.dataset.task_type = args.dataset_type
-    if args.dataset_type == 'classification':
+    cfg.dataset.task_type = args.task_type
+    if args.task_type == 'binary':
         cfg.model.loss_fun = 'cross_entropy'
     else:
         cfg.model.loss_fun = 'mse'
@@ -120,7 +120,7 @@ def graphgps_optuna(arguments=None):
         sampler=TPESampler(seed=args.seed),
         storage="sqlite:///%s/optuna.db" % args.save_dir,
         load_if_exists=True,
-        direction='minimize' if args.dataset_type == 'regression' else 'maximize'
+        direction='minimize' if args.task_type == 'regression' else 'maximize'
     )
     n_to_run = args.n_trials - len(study.trials)
     if n_to_run > 0:

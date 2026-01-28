@@ -32,7 +32,7 @@ Accepts standard CSV files with SMILES strings and target values, eliminating th
 ```bash
 graphgps_cv --data_path data.csv --save_dir output \
     --smiles_columns smiles --targets_columns target \
-    --dataset_type regression --metric mae \
+    --task_type regression --metric mae \
     --n_jobs 8 --seed 0
 ```
 
@@ -41,7 +41,7 @@ With molecular features:
 graphgps_cv --data_path data.csv --save_dir output \
     --smiles_columns smiles --targets_columns target \
     --features_generators_name morgan rdkit_2d \
-    --dataset_type regression --metric mae
+    --task_type regression --metric mae
 ```
 
 With separate test set:
@@ -49,7 +49,7 @@ With separate test set:
 graphgps_cv --data_path train.csv --save_dir output \
     --smiles_columns smiles --targets_columns target \
     --separate_test_path test.csv \
-    --dataset_type regression --metric mae
+    --task_type regression --metric mae
 ```
 
 ### Hyperparameter Optimization
@@ -57,7 +57,7 @@ graphgps_cv --data_path train.csv --save_dir output \
 ```bash
 graphgps_optuna --data_path data.csv --save_dir output \
     --smiles_columns smiles --targets_columns target \
-    --dataset_type regression --metric mae \
+    --task_type regression --metric mae \
     --n_trials 100
 ```
 
@@ -70,7 +70,7 @@ graphgps_optuna --data_path data.csv --save_dir output \
 | `--targets_columns` | Column name(s) for target values |
 | `--features_columns` | Additional feature columns (optional) |
 | `--features_generators_name` | Molecular features: `rdkit_2d`, `rdkit_2d_normalized`, `morgan`, `morgan_count` |
-| `--dataset_type` | `regression`, `classification`, or `multiclass` |
+| `--task_type` | `regression`, `binary`, or `multiclass` |
 | `--metric` | Primary metric: `mae`, `rmse`, `r2`, `auc`, etc. |
 | `--extra_metrics` | Additional metrics to compute |
 | `--cross_validation` | CV method: `kFold`, `leave-one-out`, `Monte-Carlo`, `no` |
