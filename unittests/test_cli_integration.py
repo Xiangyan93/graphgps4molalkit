@@ -30,13 +30,25 @@ _TARGETS = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
 _BINARY_TARGETS = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
 
 
-def _write_csv(path, smiles, targets, target_col="target"):
-    """Write a minimal CSV with smiles and target columns."""
+_FEATURES_A = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+_FEATURES_B = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+
+
+def _write_csv(path, smiles, targets, target_col="target",
+               features=None, feature_cols=None):
+    """Write a minimal CSV with smiles, target, and optional feature columns."""
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["smiles", target_col])
-        for s, t in zip(smiles, targets):
-            writer.writerow([s, t])
+        header = ["smiles", target_col]
+        if feature_cols:
+            header.extend(feature_cols)
+        writer.writerow(header)
+        for i, (s, t) in enumerate(zip(smiles, targets)):
+            row = [s, t]
+            if features:
+                for feat_list in features:
+                    row.append(feat_list[i])
+            writer.writerow(row)
 
 
 @pytest.fixture
@@ -57,6 +69,24 @@ def regression_csv(tmp_dir):
 def binary_csv(tmp_dir):
     path = os.path.join(tmp_dir, "data_bin.csv")
     _write_csv(path, _SMILES, _BINARY_TARGETS)
+    return path
+
+
+@pytest.fixture
+def regression_features_csv(tmp_dir):
+    path = os.path.join(tmp_dir, "data_feat.csv")
+    _write_csv(path, _SMILES, _TARGETS,
+               features=[_FEATURES_A, _FEATURES_B],
+               feature_cols=["feat_a", "feat_b"])
+    return path
+
+
+@pytest.fixture
+def ext_test_features_csv(tmp_dir):
+    path = os.path.join(tmp_dir, "test_feat.csv")
+    _write_csv(path, _SMILES[:3], _TARGETS[:3],
+               features=[_FEATURES_A[:3], _FEATURES_B[:3]],
+               feature_cols=["feat_a", "feat_b"])
     return path
 
 
@@ -127,6 +157,49 @@ class TestGraphGPSCVIntegration:
             "--n_jobs", "1",
             "--save_dir", save_dir,
             "--separate_test_path", ext_test_csv,
+        ])
+
+        assert os.path.exists(os.path.join(save_dir, "test_ext_prediction.csv"))
+        assert os.path.exists(os.path.join(save_dir, "test_ext_metrics.csv"))
+
+    def test_kfold_regression_with_features(self, tmp_dir, regression_features_csv):
+        from graphgps.optuna.cross_validation import graphgps_cv
+
+        save_dir = os.path.join(tmp_dir, "kfold_feat_out")
+        graphgps_cv([
+            "--data_path", regression_features_csv,
+            "--smiles_columns", "smiles",
+            "--targets_columns", "target",
+            "--features_columns", "feat_a", "feat_b",
+            "--task_type", "regression",
+            "--metric", "rmse",
+            "--cross_validation", "kFold",
+            "--n_splits", "2",
+            "--num_folds", "1",
+            "--ensemble_size", "1",
+            "--n_jobs", "1",
+            "--save_dir", save_dir,
+        ])
+
+        assert os.path.isdir(save_dir)
+        assert os.path.exists(os.path.join(save_dir, "kFold_metrics.csv"))
+
+    def test_external_test_with_features(self, tmp_dir, regression_features_csv,
+                                         ext_test_features_csv):
+        from graphgps.optuna.cross_validation import graphgps_cv
+
+        save_dir = os.path.join(tmp_dir, "ext_feat_out")
+        graphgps_cv([
+            "--data_path", regression_features_csv,
+            "--smiles_columns", "smiles",
+            "--targets_columns", "target",
+            "--features_columns", "feat_a", "feat_b",
+            "--task_type", "regression",
+            "--metric", "rmse",
+            "--ensemble_size", "1",
+            "--n_jobs", "1",
+            "--save_dir", save_dir,
+            "--separate_test_path", ext_test_features_csv,
         ])
 
         assert os.path.exists(os.path.join(save_dir, "test_ext_prediction.csv"))

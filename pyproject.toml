@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "graphgps"
+version = "0.0.0"
+description = "This is a easy-to-use command line version of GraphGPS."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Yan Xiang" },
+]
+classifiers = [
+    "Programming Language :: Python",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "torch==2.6.0",
+    "torch-scatter",
+    "torch-sparse",
+    "torch-geometric",
+    "pytorch-lightning",
+    "yacs",
+    "torchmetrics",
+    "performer-pytorch",
+    "ogb",
+]
+
+[project.urls]
+Homepage = "https://github.com/xiangyan93/graphgps4molalkit"
+
+[project.scripts]
+graphgps_cv = "graphgps.optuna.cross_validation:graphgps_cv"
+graphgps_optuna = "graphgps.optuna.optuna:graphgps_optuna"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["graphgps*"]

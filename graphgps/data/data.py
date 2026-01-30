@@ -8,13 +8,47 @@ import pandas as pd
 from tqdm import tqdm
 from rdkit import Chem
 import torch
-from torch_geometric.data import Dataset, InMemoryDataset
+from torch_geometric.data import Data, Dataset, InMemoryDataset
 from torch_geometric.datasets.molecule_net import MoleculeNet
-from torch_geometric.utils import from_smiles
+from ogb.utils.features import atom_to_feature_vector, bond_to_feature_vector
 from mgktools.features_mol.features_generators import FeaturesGenerator
 
 
 SMILES_TO_FEATURES: Dict[str, torch.tensor] = {}
+
+
+def mol_to_pyg_data(smiles: str) -> Data:
+    """Convert a SMILES string to a PyG Data object using OGB feature encoding.
+
+    This ensures atom/bond feature indices are compatible with OGB's
+    AtomEncoder and BondEncoder embedding tables.
+    """
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        mol = Chem.MolFromSmiles('')
+
+    x = []
+    for atom in mol.GetAtoms():
+        x.append(atom_to_feature_vector(atom))
+    x = torch.tensor(x, dtype=torch.long) if x else torch.zeros((0, 9), dtype=torch.long)
+
+    edge_index = []
+    edge_attr = []
+    for bond in mol.GetBonds():
+        i = bond.GetBeginAtomIdx()
+        j = bond.GetEndAtomIdx()
+        feat = bond_to_feature_vector(bond)
+        edge_index.extend([[i, j], [j, i]])
+        edge_attr.extend([feat, feat])
+
+    if edge_index:
+        edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
+        edge_attr = torch.tensor(edge_attr, dtype=torch.long)
+    else:
+        edge_index = torch.zeros((2, 0), dtype=torch.long)
+        edge_attr = torch.zeros((0, 3), dtype=torch.long)
+
+    return Data(x=x, edge_index=edge_index, edge_attr=edge_attr, smiles=smiles)
 
 
 class DatasetFromCSVFile(InMemoryDataset):
@@ -63,18 +97,7 @@ class DatasetFromCSVFile(InMemoryDataset):
                 assert smiles_column in df.columns
             df['smiles'] = df.apply(lambda x: '.'.join([x[smiles_column] for smiles_column in self.smiles_columns]), axis=1)
             for j, row in tqdm(df.iterrows(), total=len(df)):
-                data = from_smiles(row['smiles'])
-                # Remap RDKit bond types to OGB bond indices (0-4):
-                # OGB expects: 0=SINGLE, 1=DOUBLE, 2=TRIPLE, 3=AROMATIC, 4=misc
-                # RDKit returns: 1=SINGLE, 2=DOUBLE, 3=TRIPLE, 12=AROMATIC, 17=DATIVE, etc.
-                bond_type_map = {1: 0, 2: 1, 3: 2, 12: 3}  # RDKit -> OGB
-                edge_types = data.edge_attr[:, 0].clone()
-                for rdkit_type, ogb_type in bond_type_map.items():
-                    edge_types[data.edge_attr[:, 0] == rdkit_type] = ogb_type
-                # Map any unmapped bond types (DATIVE, etc.) to 4 (misc)
-                unmapped_mask = ~torch.isin(data.edge_attr[:, 0], torch.tensor(list(bond_type_map.keys())))
-                edge_types[unmapped_mask] = 4
-                data.edge_attr[:, 0] = edge_types
+                data = mol_to_pyg_data(row['smiles'])
                 if self.target_columns is None:
                     data.y = None
                 elif self.task_type == 'regression':

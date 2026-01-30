@@ -40,7 +40,10 @@ class Dataset:
 
     @property
     def y(self):
-        return np.array(self.dataset_pyg.y)
+        y = self.dataset_pyg.y
+        if hasattr(y, 'detach'):
+            return y.detach().cpu().numpy()
+        return np.asarray(y)
 
     def num_tasks(self):
         return self.y.shape[1]
