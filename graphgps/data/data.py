@@ -118,12 +118,14 @@ class DatasetFromCSVFile(InMemoryDataset):
                             features_mol = []
                             for fg in self.features_generators:
                                 fs = fg(mol)
-                                fs = np.where(np.isnan(fs), 0, fs)
+                                fs = np.where(np.isfinite(fs), fs, 0)
                                 features_mol.append(fs)
                             features_mol = np.concatenate(features_mol).tolist()
                             SMILES_TO_FEATURES[smiles] = features_mol
                         features.extend(SMILES_TO_FEATURES[smiles])
                 data.features = torch.tensor(features, dtype=torch.float32).view(1, -1)
+                data.features = torch.where(torch.isfinite(data.features), data.features, torch.zeros_like(data.features))
+                data.features_raw = data.features.clone()
 
                 if self.pre_filter is not None and not self.pre_filter(data):
                     continue

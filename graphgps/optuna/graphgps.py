@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from typing import List
+from typing import List, Optional
 import os
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 from tqdm import trange
 from graphgps.run.utils import *
 from torch_geometric.graphgym.config import cfg
@@ -15,9 +16,17 @@ CWD = os.path.dirname(__file__)
 
 
 class GraphGPS:
+    # Feature sizes for each generator type
+    GENERATOR_FEATURE_SIZES = {
+        'rdkit_2d': 200,
+        'rdkit_2d_normalized': 200,
+        'morgan': 2048,
+        'morgan_count': 2048,
+    }
+
     def __init__(self, save_dir: str, cfg_path: str, n_features: int = 0,
                  features_generators_name: List[str] = None, ensemble_size: int = 1, number_of_molecules: int = 1,
-                 n_jobs: int = 8, seed: int = 0):
+                 n_jobs: int = 8, seed: int = 0, features_scaling: bool = True):
         self.save_dir = save_dir
         if cfg_path is None or os.path.exists(cfg_path):
             self.cfg_path = cfg_path
@@ -31,15 +40,94 @@ class GraphGPS:
         self.number_of_molecules = number_of_molecules
         self.n_jobs = n_jobs
         self.seed = seed
+        self.features_scaling = features_scaling
+        self.scaler: Optional[StandardScaler] = None
         torch.set_num_threads(self.n_jobs)
+
+    def _get_no_scale_indices(self) -> Optional[List[int]]:
+        """Compute feature indices that should not be scaled.
+
+        Features from rdkit_2d_normalized are already pre-normalized to [0, 1],
+        so they should not be scaled again by StandardScaler.
+
+        Feature order: features_columns first, then features_generators (per molecule).
+
+        Returns:
+            List of feature indices to skip during scaling, or None if all should be scaled.
+        """
+        if self.features_generators_name is None:
+            return None
+        if 'rdkit_2d_normalized' not in self.features_generators_name:
+            return None
+
+        no_scale_indices = []
+        # Start offset after features_columns
+        offset = self.n_features
+
+        # For each molecule, iterate through generators in order
+        for _ in range(self.number_of_molecules):
+            for fg in self.features_generators_name:
+                size = self.GENERATOR_FEATURE_SIZES.get(fg, 0)
+                if fg == 'rdkit_2d_normalized':
+                    no_scale_indices.extend(range(offset, offset + size))
+                offset += size
+
+        return no_scale_indices if no_scale_indices else None
+
+    def _restore_and_scale_features(self, dataset_pyg, fit: bool = False):
+        """Restore features from features_raw and optionally fit/transform with StandardScaler.
+
+        Args:
+            dataset_pyg: PyG dataset whose Data objects have features and features_raw.
+            fit: If True, fit the scaler on this data then transform.
+                 If False, transform using the already-fitted scaler.
+
+        Note:
+            Features from rdkit_2d_normalized are NOT scaled (identity transform)
+            since they are already pre-normalized to [0, 1] range.
+        """
+        if not self.features_scaling:
+            return
+        if len(dataset_pyg) == 0:
+            return
+        if not hasattr(dataset_pyg[0], 'features_raw'):
+            return
+        if dataset_pyg[0].features_raw.numel() == 0:
+            return
+
+        for data in dataset_pyg:
+            data.features = data.features_raw.clone()
+
+        raw_matrix = torch.cat([data.features for data in dataset_pyg], dim=0).numpy()
+
+        if fit:
+            self.scaler = StandardScaler()
+            self.scaler.fit(raw_matrix)
+
+            # Apply identity transform for rdkit_2d_normalized features
+            no_scale_indices = self._get_no_scale_indices()
+            if no_scale_indices is not None:
+                self.scaler.mean_[no_scale_indices] = 0.0
+                self.scaler.scale_[no_scale_indices] = 1.0
+
+        if self.scaler is None:
+            return
+
+        scaled = self.scaler.transform(raw_matrix)
+
+        for i, data in enumerate(dataset_pyg):
+            data.features = torch.tensor(scaled[i:i+1], dtype=torch.float32)
 
     def fit_molalkit(self, train_data, iteration: int = 0):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         self.cfg_init()
 
-        train_data_loader = DataLoader(train_data.dataset_pyg, 
-                                       batch_size=cfg.train.batch_size, 
+        train_pyg = train_data.dataset_pyg
+        self._restore_and_scale_features(train_pyg, fit=True)
+
+        train_data_loader = DataLoader(train_pyg,
+                                       batch_size=cfg.train.batch_size,
                                        shuffle=True)
 
         df_loss = pd.DataFrame({})
@@ -63,7 +151,10 @@ class GraphGPS:
         
     def predict_value(self, pred_data):
         self.cfg_init()
-        test_data_loader = DataLoader(pred_data.dataset_pyg,
+        test_pyg = pred_data.dataset_pyg
+        self._restore_and_scale_features(test_pyg, fit=False)
+
+        test_data_loader = DataLoader(test_pyg,
                                       batch_size=cfg.train.batch_size,
                                       shuffle=False)
         predictions = []
@@ -94,17 +185,17 @@ class GraphGPS:
             cfg.out_dir = os.path.join(self.save_dir, "graphgps")
             cfg.merge_from_file(self.cfg_path)
             dump_cfg(cfg)
+            n_generator_features = 0
             if self.features_generators_name is not None:
-                cfg.gnn.use_features = True
-                n_features = 0
                 for fg in self.features_generators_name:
-                    if fg in ['rdkit_2d', 'rdkit_2d_normalized']:
-                        n_features += 200
-                    elif fg in ['morgan', 'morgan_count']:
-                        n_features += 2048
-                    else:
+                    if fg not in self.GENERATOR_FEATURE_SIZES:
                         raise ValueError(f"Unknown features generator: {fg}")
-                cfg.gnn.n_features = self.n_features + n_features * self.number_of_molecules
+                    n_generator_features += self.GENERATOR_FEATURE_SIZES[fg]
+                n_generator_features *= self.number_of_molecules
+            total_features = self.n_features + n_generator_features
+            if total_features > 0:
+                cfg.gnn.use_features = True
+                cfg.gnn.n_features = total_features
             auto_select_device()
 
     def train_epoch(self, loader, model, optimizer, scheduler, batch_accumulation):

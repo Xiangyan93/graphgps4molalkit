@@ -19,12 +19,9 @@ def graphgps_optuna(arguments=None):
         cfg.gnn.use_features = True
         n_features = 0
         for fg in args.features_generators_name:
-            if fg in ['rdkit_2d', 'rdkit_2d_normalized']:
-                n_features += 200
-            elif fg in ['morgan', 'morgan_count']:
-                n_features += 2048
-            else:
+            if fg not in GraphGPS.GENERATOR_FEATURE_SIZES:
                 raise ValueError(f"Unknown features generator: {fg}")
+            n_features += GraphGPS.GENERATOR_FEATURE_SIZES[fg]
         cfg.gnn.n_features = n_features * len(args.smiles_columns)
     cfg.dataset.task_type = args.task_type
     if args.task_type == 'binary':
@@ -75,10 +72,12 @@ def graphgps_optuna(arguments=None):
         args.dataset.compute_posenc_stats()
         model = GraphGPS(save_dir='%s/trial-%d' % (args.save_dir, trial.number),
                          cfg_path=None,
+                         n_features=len(args.features_columns) if args.features_columns is not None else 0,
                          features_generators_name=args.features_generators_name,
-                         number_of_molecules=1,
+                         number_of_molecules=len(args.smiles_columns),
                          n_jobs=args.n_jobs,
-                         seed=args.seed)
+                         seed=args.seed,
+                         features_scaling=args.features_scaling)
         evaluator = Evaluator(save_dir='%s/trial-%d' % (args.save_dir, trial.number),
                             dataset=args.dataset,
                             model=model,

@@ -59,6 +59,8 @@ class TrainArgs(Tap):
     """Path to separate validation set, optional."""
     ensemble_size: int = 1
     """Number of models in the ensemble."""
+    features_scaling: bool = True
+    """Whether to apply StandardScaler to additional features. Use --no_features_scaling to disable."""
 
     @property
     def metrics(self) -> List[Metric]:

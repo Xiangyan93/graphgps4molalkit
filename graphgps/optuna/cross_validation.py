@@ -29,7 +29,8 @@ def graphgps_cv(arguments=None):
                      number_of_molecules=len(args.smiles_columns),
                      ensemble_size=args.ensemble_size,
                      n_jobs=args.n_jobs,
-                     seed=args.seed)
+                     seed=args.seed,
+                     features_scaling=args.features_scaling)
     evaluator = Evaluator(save_dir=args.save_dir,
                           dataset=args.dataset,
                           model=model,
