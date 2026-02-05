@@ -17,12 +17,7 @@ def graphgps_optuna(arguments=None):
     # modify cfg based on the arguments
     if args.features_generators_name is not None:
         cfg.gnn.use_features = True
-        n_features = 0
-        for fg in args.features_generators_name:
-            if fg not in GraphGPS.GENERATOR_FEATURE_SIZES:
-                raise ValueError(f"Unknown features generator: {fg}")
-            n_features += GraphGPS.GENERATOR_FEATURE_SIZES[fg]
-        cfg.gnn.n_features = n_features * len(args.smiles_columns)
+        cfg.gnn.n_features = args.n_generator_features
     cfg.dataset.task_type = args.task_type
     if args.task_type == 'binary':
         cfg.model.loss_fun = 'cross_entropy'
@@ -74,6 +69,7 @@ def graphgps_optuna(arguments=None):
                          cfg_path=None,
                          n_features=len(args.features_columns) if args.features_columns is not None else 0,
                          features_generators_name=args.features_generators_name,
+                         generator_feature_sizes=args.generator_feature_sizes,
                          number_of_molecules=len(args.smiles_columns),
                          n_jobs=args.n_jobs,
                          seed=args.seed,

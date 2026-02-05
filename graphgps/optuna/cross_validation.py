@@ -26,6 +26,7 @@ def graphgps_cv(arguments=None):
                      cfg_path=args.cfg_file,
                      n_features=len(args.features_columns) if args.features_columns is not None else 0,
                      features_generators_name=args.features_generators_name,
+                     generator_feature_sizes=args.generator_feature_sizes,
                      number_of_molecules=len(args.smiles_columns),
                      ensemble_size=args.ensemble_size,
                      n_jobs=args.n_jobs,

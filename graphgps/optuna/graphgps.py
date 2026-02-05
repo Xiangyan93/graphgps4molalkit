@@ -16,16 +16,10 @@ CWD = os.path.dirname(__file__)
 
 
 class GraphGPS:
-    # Feature sizes for each generator type
-    GENERATOR_FEATURE_SIZES = {
-        'rdkit_2d': 200,
-        'rdkit_2d_normalized': 200,
-        'morgan': 2048,
-        'morgan_count': 2048,
-    }
-
     def __init__(self, save_dir: str, cfg_path: str, n_features: int = 0,
-                 features_generators_name: List[str] = None, ensemble_size: int = 1, number_of_molecules: int = 1,
+                 features_generators_name: List[str] = None,
+                 generator_feature_sizes: Optional[List[int]] = None,
+                 ensemble_size: int = 1, number_of_molecules: int = 1,
                  n_jobs: int = 8, seed: int = 0, features_scaling: bool = True):
         self.save_dir = save_dir
         if cfg_path is None or os.path.exists(cfg_path):
@@ -36,6 +30,7 @@ class GraphGPS:
             raise FileNotFoundError(f"Config file {cfg_path} not found.")
         self.n_features = n_features
         self.features_generators_name = features_generators_name
+        self.generator_feature_sizes = generator_feature_sizes
         self.ensemble_size = ensemble_size
         self.number_of_molecules = number_of_molecules
         self.n_jobs = n_jobs
@@ -55,7 +50,7 @@ class GraphGPS:
         Returns:
             List of feature indices to skip during scaling, or None if all should be scaled.
         """
-        if self.features_generators_name is None:
+        if self.features_generators_name is None or self.generator_feature_sizes is None:
             return None
         if 'rdkit_2d_normalized' not in self.features_generators_name:
             return None
@@ -66,8 +61,7 @@ class GraphGPS:
 
         # For each molecule, iterate through generators in order
         for _ in range(self.number_of_molecules):
-            for fg in self.features_generators_name:
-                size = self.GENERATOR_FEATURE_SIZES.get(fg, 0)
+            for fg, size in zip(self.features_generators_name, self.generator_feature_sizes):
                 if fg == 'rdkit_2d_normalized':
                     no_scale_indices.extend(range(offset, offset + size))
                 offset += size
@@ -186,12 +180,8 @@ class GraphGPS:
             cfg.merge_from_file(self.cfg_path)
             dump_cfg(cfg)
             n_generator_features = 0
-            if self.features_generators_name is not None:
-                for fg in self.features_generators_name:
-                    if fg not in self.GENERATOR_FEATURE_SIZES:
-                        raise ValueError(f"Unknown features generator: {fg}")
-                    n_generator_features += self.GENERATOR_FEATURE_SIZES[fg]
-                n_generator_features *= self.number_of_molecules
+            if self.generator_feature_sizes is not None:
+                n_generator_features = sum(self.generator_feature_sizes) * self.number_of_molecules
             total_features = self.n_features + n_generator_features
             if total_features > 0:
                 cfg.gnn.use_features = True

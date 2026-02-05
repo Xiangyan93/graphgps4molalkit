@@ -72,7 +72,28 @@ class TrainArgs(Tap):
             return None
         else:
             return [FeaturesGenerator(features_generator_name=fg) for fg in self.features_generators_name]
-        
+
+    @property
+    def generator_feature_sizes(self) -> Optional[List[int]]:
+        """Compute feature sizes for each generator using a dummy molecule."""
+        if self.features_generators_name is None:
+            return None
+        from rdkit import Chem
+        dummy_mol = Chem.MolFromSmiles('C')
+        sizes = []
+        for fg_name in self.features_generators_name:
+            fg = FeaturesGenerator(features_generator_name=fg_name)
+            sizes.append(len(fg(dummy_mol)))
+        return sizes
+
+    @property
+    def n_generator_features(self) -> int:
+        """Total number of generator features across all molecules."""
+        sizes = self.generator_feature_sizes
+        if sizes is None:
+            return 0
+        return sum(sizes) * len(self.smiles_columns)
+
     def process_args(self) -> None:
         self.opts = ['wandb.use', 'False']
         if self.cfg_file is None:

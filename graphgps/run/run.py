@@ -1,6 +1,7 @@
 from graphgps.run.args import TrainArgs, PredictArgs
 from graphgps.run.utils import *
 from graphgps.data.data import DatasetFromCSVFile
+from mgktools.features_mol.features_generators import FeaturesGenerator
 from torch_geometric.loader import DataLoader
 import numpy as np
 import pandas as pd
@@ -23,14 +24,12 @@ def graphgps_train(arguments=None):
     cfg.output_details = args.output_details
     if args.features_generator is not None:
         cfg.gnn.use_features = True
-        n_features = 0
-        for fg in args.features_generator:
-            if fg in ['rdkit_2d', 'rdkit_2d_normalized']:
-                n_features += 200
-            elif fg in ['morgan', 'morgan_count']:
-                n_features += 2048
-            else:
-                raise ValueError(f"Unknown features generator: {fg}")
+        from rdkit import Chem
+        dummy_mol = Chem.MolFromSmiles('C')
+        n_features = sum(
+            len(FeaturesGenerator(features_generator_name=fg)(dummy_mol))
+            for fg in args.features_generator
+        )
         cfg.gnn.n_features = n_features * len(args.smiles_columns)
     dump_cfg(cfg)
     # Set Pytorch environment
@@ -86,14 +85,12 @@ def graphgps_predict(arguments=None):
     load_cfg(cfg, args)
     if args.features_generator is not None:
         cfg.gnn.use_features = True
-        n_features = 0
-        for fg in args.features_generator:
-            if fg in ['rdkit_2d', 'rdkit_2d_normalized']:
-                n_features += 200
-            elif fg in ['morgan', 'morgan_count']:
-                n_features += 2048
-            else:
-                raise ValueError(f"Unknown features generator: {fg}")
+        from rdkit import Chem
+        dummy_mol = Chem.MolFromSmiles('C')
+        n_features = sum(
+            len(FeaturesGenerator(features_generator_name=fg)(dummy_mol))
+            for fg in args.features_generator
+        )
         cfg.gnn.n_features = n_features * len(args.smiles_columns)
     dump_cfg(cfg)
     # Set Pytorch environment
