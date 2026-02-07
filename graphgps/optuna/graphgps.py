@@ -153,25 +153,24 @@ class GraphGPS:
                                       shuffle=False)
         predictions = []
         with torch.no_grad():
-            for model_idx, model in enumerate(self.models):
+            for model in self.models:
                 preds = []
                 model.eval()
                 for batch in test_data_loader:
                     batch.to(torch.device(cfg.accelerator))
-                    pred = model(batch)
-                    preds.append(pred[0].detach().cpu().numpy())
+                    pred, _ = model(batch)
+                    preds.append(pred.detach().cpu().numpy())
                 predictions.append(np.concatenate(preds))
-        predictions = np.mean(predictions, axis=0)
-        return predictions
+        return np.mean(predictions, axis=0)
 
     def predict_uncertainty(self, pred_data):
-        self.cfg_init()
         if cfg.dataset.task_type == 'regression':
             raise ValueError("Uncertainty estimation is not supported for regression tasks.")
-        else:
-            preds = self.predict_value(pred_data)
-            preds = np.array([preds, 1-preds]).T
-            return (0.25 - np.var(preds, axis=1)) * 4
+        preds = np.asarray(self.predict_value(pred_data))
+        preds = np.clip(preds, 1e-10, 1 - 1e-10)
+        # Binary entropy per task, averaged across tasks → 1D (n_samples,)
+        task_entropies = -(preds * np.log(preds) + (1 - preds) * np.log(1 - preds))
+        return np.mean(task_entropies, axis=-1)
 
     def cfg_init(self):
         if self.cfg_path is not None:

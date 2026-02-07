@@ -18,11 +18,6 @@ def graphgps_optuna(arguments=None):
     if args.features_generators_name is not None:
         cfg.gnn.use_features = True
         cfg.gnn.n_features = args.n_generator_features
-    cfg.dataset.task_type = args.task_type
-    if args.task_type == 'binary':
-        cfg.model.loss_fun = 'cross_entropy'
-    else:
-        cfg.model.loss_fun = 'mse'
     dump_cfg(cfg)
     auto_select_device()
     # Set Pytorch environment
@@ -51,7 +46,7 @@ def graphgps_optuna(arguments=None):
             'gnn.agg': trial.suggest_categorical('gnn_aggr', ['mean', 'add']),
             'optim.weight_decay': trial.suggest_categorical('weight_decay', [0.0, 1e-5, 1e-4, 1e-3]),
             'optim.base_lr': trial.suggest_categorical('base_lr', [1e-4, 5e-4, 1e-3]),
-            'optim.max_epoch': trial.suggest_categorical('max_epoch', [50, 100, 200]),
+            'optim.max_epoch': trial.suggest_categorical('max_epoch', [50, 100, 200, 400, 800]),
             'train.batch_size': trial.suggest_categorical('batch_size', [32, 64, 128]),
         }
         params['optim.num_warmup_epochs'] = int(0.1 * params['optim.max_epoch'])

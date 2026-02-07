@@ -97,7 +97,10 @@ class TrainArgs(Tap):
     def process_args(self) -> None:
         self.opts = ['wandb.use', 'False']
         if self.cfg_file is None:
-            self.cfg_file = f'{CWD}/GPS_template.yaml'
+            if self.task_type == 'regression':
+                self.cfg_file = f'{CWD}/GPS_regression_template.yaml'
+            else:
+                self.cfg_file = f'{CWD}/GPS_classification_template.yaml'
         self.dataset = get_data(path=self.data_path,
                                 save_dir=self.save_dir,
                                 smiles_columns=self.smiles_columns,

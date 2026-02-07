@@ -38,5 +38,8 @@ graphgps_optuna = "graphgps.optuna.optuna:graphgps_optuna"
 [tool.setuptools]
 include-package-data = false
 
+[tool.setuptools.package-data]
+"graphgps.optuna" = ["*.yaml"]
+
 [tool.setuptools.packages.find]
 include = ["graphgps*"]

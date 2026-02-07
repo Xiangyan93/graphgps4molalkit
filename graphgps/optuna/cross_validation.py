@@ -12,11 +12,6 @@ def graphgps_cv(arguments=None):
     set_cfg(cfg)
     load_cfg(cfg, args)
     cfg.out_dir = args.save_dir
-    cfg.dataset.task_type = args.task_type
-    if args.task_type == 'binary':
-        cfg.model.loss_fun = 'cross_entropy'
-    else:
-        cfg.model.loss_fun = 'mse'
     dump_cfg(cfg)
     auto_select_device()
     # Set Pytorch environment

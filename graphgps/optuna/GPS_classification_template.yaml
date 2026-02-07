@@ -4,15 +4,13 @@ wandb:
 dataset:
   format: PyG-Custom
   task: graph
-  task_type: regression # classification # 
+  task_type: classification
   transductive: False
   node_encoder: True
-  node_encoder_name: Atom #TypeDictNode+LapPE # (Atom or TypeDictNode)+LapPE;+RWSE;+EquivStableLapPE;+SignNet
-#  node_encoder_num_types: 28 # required only for TypeDictNode
+  node_encoder_name: Atom
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: Bond # TypeDictEdge # (Bond or TypeDictEdge)
-#  edge_encoder_num_types: 4 # required only for TypeDictEdge
+  edge_encoder_name: Bond
   edge_encoder_bn: False
 posenc_RWSE:
   enable: False
@@ -43,11 +41,11 @@ posenc_SignNet:
   eigen:
     laplacian_norm: none
     eigvec_norm: L2
-    max_freqs: 37  # Max graph size in molpcba is 332, but 97.1% are <= 37
+    max_freqs: 37
   model: DeepSet
-  dim_pe: 32  # Note: In original SignNet codebase dim_pe is always equal to max_freq
-  layers: 8  # Num. layers in \phi model
-  post_layers: 3  # Num. layers in \rho model; The original uses the same as in \phi
+  dim_pe: 32
+  layers: 8
+  post_layers: 3
   phi_hidden_dim: 64
   phi_out_dim: 64
 train:
@@ -57,14 +55,13 @@ train:
   ckpt_period: 100
 model:
   type: GPSModel
-  loss_fun: mse #cross_entropy # 
-  # edge_decoding: dot
-  graph_pooling: mean # add;mean;max;graph_token.
+  loss_fun: cross_entropy
+  graph_pooling: mean
 gt:
-  layer_type: GINE+Transformer  # CustomGatedGCN+Transformer;GCN+Transformer
+  layer_type: GINE+Transformer
   layers: 10
   n_heads: 4
-  dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dim_hidden: 64
   dropout: 0.0
   attn_dropout: 0.5
   layer_norm: False
@@ -72,8 +69,8 @@ gt:
 gnn:
   head: san_graph
   layers_pre_mp: 0
-  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
-  dim_inner: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  layers_post_mp: 3
+  dim_inner: 64
   batchnorm: True
   act: relu
   dropout: 0.0

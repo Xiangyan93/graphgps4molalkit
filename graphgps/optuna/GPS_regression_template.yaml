@@ -1,0 +1,86 @@
+wandb:
+  use: False
+  project: Custom
+dataset:
+  format: PyG-Custom
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: False
+  kernel:
+    times_func: range(1,17)
+  model: Linear
+  dim_pe: 20
+  raw_norm_type: BatchNorm
+posenc_LapPE:
+  enable: False
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 8
+  model: DeepSet
+  dim_pe: 8
+  layers: 2
+  raw_norm_type: none
+posenc_EquivStableLapPE:
+  enable: False
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 8
+  raw_norm_type: none
+posenc_SignNet:
+  enable: False
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 37
+  model: DeepSet
+  dim_pe: 32
+  layers: 8
+  post_layers: 3
+  phi_hidden_dim: 64
+  phi_out_dim: 64
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: GPSModel
+  loss_fun: mse
+  graph_pooling: mean
+gt:
+  layer_type: GINE+Transformer
+  layers: 10
+  n_heads: 4
+  dim_hidden: 64
+  dropout: 0.0
+  attn_dropout: 0.5
+  layer_norm: False
+  batch_norm: True
+gnn:
+  head: san_graph
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 64
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.0005
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
