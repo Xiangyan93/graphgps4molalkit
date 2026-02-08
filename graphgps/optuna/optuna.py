@@ -15,9 +15,11 @@ def graphgps_optuna(arguments=None):
     load_cfg(cfg, args)
     cfg.out_dir = args.save_dir
     # modify cfg based on the arguments
-    if args.features_generators_name is not None:
+    n_features_columns = len(args.features_columns) if args.features_columns is not None else 0
+    total_features = n_features_columns + args.n_generator_features
+    if total_features > 0:
         cfg.gnn.use_features = True
-        cfg.gnn.n_features = args.n_generator_features
+        cfg.gnn.n_features = total_features
     dump_cfg(cfg)
     auto_select_device()
     # Set Pytorch environment
